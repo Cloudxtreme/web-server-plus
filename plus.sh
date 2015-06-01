@@ -15,10 +15,11 @@ TEMP_LOG=./temp.log
 TEMP_IP=./ips.log
 #最多处理IP数量
 TOTAL_IP=5
+SAFE_LOG='./save_ips.log'
 #白名单（一行一个）
-SAFE_IP=$(awk '{print $0}' ./safe_ip.log)
+SAFE_IP=$(awk '{print $0}' ${SAFE_LOG})
 #指定限制文件
-BAD_STR='error'
+BAD_STR='http://fisiolaborbsb.com.br'
 #黑名单IP记录文件
 BAN_IP=./balckip.log
 #导入英文
