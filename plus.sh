@@ -4,6 +4,7 @@
 
 #封禁IP访问80
 #iptables -I INPUT -p tcp --dport 80 -s 10.1.2.101 -j DROP
+#删除指定规则 iptables -D INPUT 3
 
 #运行日志
 RUN_LOG=./debug.log
