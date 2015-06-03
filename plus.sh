@@ -51,9 +51,9 @@ TEMP_BAD_STR_IPS=./bad_str_ips.log
 if [ ! -f ${TEMP_BAD_STR_IPS} ];then
 touch ${TEMP_BAD_STR_IPS}
 fi
-for a in ${BAD_STR_ARRAY[*]}
+for str in ${BAD_STR_ARRAY[*]}
 do
-    awk '/${a}/{print $1}' ${TEMP_LOG} |uniq -c | head -2 >> ${TEMP_BAD_STR_IPS}
+    cat ${TEMP_LOG}|grep ${str} | awk '{print $1}'  |uniq -c | head -2 >> ${TEMP_BAD_STR_IPS}
 done
 #合并访问超出以及恶意访问的IP然后去重
 cat ${TEMP_BAD_VISETER} |awk '{print $2}' > ./bad_ips.log
@@ -69,7 +69,7 @@ do
     IS_SAFE=`cat ${SAFE_LOG}|grep $a`
     if [ ! -z "${IS_SAFE}" ];then
     #如果新加入的从防火墙移除
-    NUM=`iptables -L --line-number |grep 10.1.2.101|awk '{print $1}'`
+    NUM=`iptables -L --line-number |grep ${a}|awk '{print $1}'`
     if [ ! -z "${NUM}"];then
     iptables -D INPUT ${NUM}
     fi
@@ -93,7 +93,5 @@ do
         fi
     fi  
 done
-
 rm -f /tmp/plus.lock
 exit
-
