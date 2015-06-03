@@ -44,7 +44,7 @@ for((i=0;i<${1};i++));do
 done
 #超出限定的前5个访问存放统计表
 TEMP_BAD_VISETER=./bad_vis_ips.log
-cat ${TEMP_LOG} |awk -vnvar="$2" '{a[$1]++}END{for (j in a) if(a[j]>nvar) print j}'|sort -rnk1|head -5> ${TEMP_BAD_VISETER}
+cat ${TEMP_LOG} |awk -vnvar="$2" '{a[$1]++}END{for (j in a) if(a[j]>nvar) print a[j]"\t"j}'|sort -rnk1|head -5> ${TEMP_BAD_VISETER}
 
 #访问恶意字符串直接拉黑（每个字符串最多处理2个）
 TEMP_BAD_STR_IPS=./bad_str_ips.log
@@ -53,12 +53,12 @@ touch ${TEMP_BAD_STR_IPS}
 fi
 for a in ${BAD_STR_ARRAY[*]}
 do
-    awk '/game_server_web/{print $1}' ${TEMP_LOG} |uniq -c | head -2 >> ${TEMP_BAD_STR_IPS}
-  
+    awk '/${a}/{print $1}' ${TEMP_LOG} |uniq -c | head -2 >> ${TEMP_BAD_STR_IPS}
 done
 #合并访问超出以及恶意访问的IP然后去重
-cat ${TEMP_BAD_VISETER} > ./bad_ips.log
-cat ${TEMP_BAD_STR_IPS} >> ./bad_ips.log
+cat ${TEMP_BAD_VISETER} |awk '{print $2}' > ./bad_ips.log
+cat ${TEMP_BAD_STR_IPS} |awk '{print $2}' >> ./bad_ips.log
+
 awk '{print $1}' ./bad_ips.log |uniq >./bad_ip.log
 
 #处理本次拉黑的IP（去除在白名单的，去除不在黑名单的）
@@ -78,16 +78,18 @@ do
     #是否已拉黑
     IS_BAD=`cat ${BAD_IPS}|grep $a`
     if [ ! -z "${IS_BAD}" ];then
+    echo ${a}' is exist bad'
     continue
     fi
     #防止重复加入黑名单,检查是否在防火墙
     IS_EXIST=`iptables -nL |grep $a`
     if [ -z "${IS_EXIST}" ];then
     #防止防火墙规则大于2000个
-    COUNT=awk '{print NR}' ${BAD_IPS} 
-        if [ -z "${COUNT}" || ${COUNT} -lt 2000 ];then
+    COUNT=`awk '{print NR}' ${BAD_IPS}` 
+        if [ -z "${COUNT}" ] || [ ${COUNT} -lt 2000 ];then
         echo ${a} >> ${BAD_IPS}
         `iptables -I INPUT -p tcp --dport 80 -s ${a} -j DROP`
+           echo ${a}' is add bad'
         fi
     fi  
 done
