@@ -3,7 +3,7 @@
 #第一参数为时间间隔  第二个参数为访问限制
 
 #脚本路径
-FILE_PATH=/root/scripts
+FILE_PATH=/home/joyous/joyous/scripts/github/web-server-plus
 LOG_FILE=${FILE_PATH}/plus.log
 
 if [ ! -f ${LOG_FILE} ];then
@@ -16,7 +16,7 @@ fi
 touch /tmp/plus.lock
 
 #访问日志
-ACCESS_LOG='/var/www/log/access.log'
+ACCESS_LOG='/var/www/log/redis_access.log'
 if [ ! -f ${ACCESS_LOG} ];then
 echo ${ACCESS_LOG}' not find!'>>${LOG_FILE}
 exit 1
@@ -41,7 +41,7 @@ fi
 #导入英文(转换日期)
 export LANG=en_US
 #开始
-echo 'begin'>>${LOG_FILE}
+echo 'begin>>>>>>'>>${LOG_FILE}
 TEMP_LOG=${FILE_PATH}/temp.log
 if [ ! -f ${TEMP_LOG} ];then
 touch -f ${TEMP_LOG}
@@ -55,6 +55,10 @@ done
 TEMP_BAD_VISETER=${FILE_PATH}/bad_vis_ips.log
 cat ${TEMP_LOG} |awk -vnvar="$2" '{a[$1]++}END{for (j in a) if(a[j]>nvar) print a[j]"\t"j}'|sort -rnk1|head -5> ${TEMP_BAD_VISETER}
 
+echo 'bad_vister.'>>${LOG_FILE}
+cat ${TEMP_BAD_VISETER}>>${LOGF_FILE}
+
+
 #访问恶意字符串直接拉黑（每个字符串最多处理2个）
 TEMP_BAD_STR_IPS=${FILE_PATH}/bad_str_ips.log
 if [ ! -f ${TEMP_BAD_STR_IPS} ];then
@@ -64,13 +68,17 @@ for str in ${BAD_STR_ARRAY[*]}
 do
     cat ${TEMP_LOG}|grep ${str} | awk '{print $1}'  |uniq -c | head -2 >> ${TEMP_BAD_STR_IPS}
 done
+
+echo 'bad_str_vister.'>>${LOG_FILE}
+cat ${TEMP_BAD_STR_IPS}>>${LOG_FILE}
+
 #合并访问超出以及恶意访问的IP然后去重
 cat ${TEMP_BAD_VISETER} |awk '{print $2}' > ${FILE_PATH}/bad_ips.log
 cat ${TEMP_BAD_STR_IPS} |awk '{print $2}' >> ${FILE_PATH}/bad_ips.log
 awk '{print $1}' ${FILE_PATH}/bad_ips.log |uniq >${FILE_PATH}/bad_ip.log
-echo "BAD_IP">>${LOG_FILE}
+echo 'megre bad IP.'>>${LOG_FILE}
 cat ${FILE_PATH}/bad_ip.log>>${LOG_FILE}
-
+echo 'begin add iptables.'>>${LOG_FILE}
 #处理本次拉黑的IP（去除在白名单的，去除不在黑名单的）
 CURRENT_IPS=$(awk '{print $0}' ${FILE_PATH}/bad_ip.log)
 for a in ${CURRENT_IPS[*]}
@@ -78,18 +86,24 @@ do
     #是否白名单
     IS_SAFE=`cat ${SAFE_LOG}|grep $a`
     if [ ! -z "${IS_SAFE}" ];then
-    #如果新加入的从防火墙移除
+    echo ${a} 'is safe ip.'>>${LOG_FILE}
     NUM=`iptables -L --line-number |grep ${a}|awk '{print $1}'`
     if [ ! -z "${NUM}"];then
     iptables -D INPUT ${NUM}
+    echo ${a} 'is delete from iptables .'>>${LOG_FILE}
     fi
     continue
     fi
-    #是否已拉黑
+    
     IS_BAD=`cat ${BAD_IPS}|grep $a`
+    #存在黑名单
     if [ ! -z "${IS_BAD}" ];then
-    echo ${a}' is exist bad'>>${LOG_FILE}
-    continue
+         NUM=`iptables -L --line-number |grep ${a}|awk '{print $1}'`
+         #存在防火墙
+         if [ ! -z "${NUM}"];then
+             echo ${a}' is exist bad.'>>${LOG_FILE}
+             continue   
+         fi
     fi
     #防止重复加入黑名单,检查是否在防火墙
     IS_EXIST=`iptables -nL |grep $a`
@@ -97,19 +111,18 @@ do
     #防止防火墙规则大于2000个
     COUNT=`awk '{print NR}' ${BAD_IPS}` 
         if [ -z "${COUNT}" ] || [ ${COUNT} -lt 2000 ];then
-        echo ${a} >> ${BAD_IPS}
-        `iptables -I INPUT -p tcp --dport 80 -s ${a} -j DROP`
-           echo ${a}' is add bad'>>${LOG_FILE}
+         echo ${a}' add iptables.'>>${LOG_FILE}
+         SUCCESS=`/sbin/iptables -I INPUT -p tcp --dport 80 -s ${a} -j DROP`
         fi
     fi  
 done
 #删除生成文件
-echo 'delete temp file '>>${LOG_FILE}
+echo 'delete temp file.'>>${LOG_FILE}
 rm -f ${FILE_PATH}/bad_ips.log
 rm -f ${FILE_PATH}/bad_ip.log
 rm -f ${FILE_PATH}/bad_str_ips.log
 rm -f ${FILE_PATH}/bad_vis_ips.log
 rm -f ${FILE_PATH}/temp.log
-echo "end">>${LOG_FILE}
+echo "<<<<<<end">>${LOG_FILE}
 rm -f /tmp/plus.lock
 exit
