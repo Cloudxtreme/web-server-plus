@@ -20,3 +20,7 @@ bad_vis_ips.log是超出访问限制的ip（一行一个）
 bad_str_ips.log是禁止出现的字符串IP（一行一个）
 bad_ips.log是bad_vis_ips.log和bad_str_ips.log的合并去重
 
+#定时任务
+*/1 * * * * sh /root/scripts/plus.sh 1 60
+
+
