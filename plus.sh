@@ -120,6 +120,7 @@ do
     COUNT=`awk '{print NR}' ${BAD_IPS}` 
         if [ -z "${COUNT}" ] || [ ${COUNT} -lt 2000 ];then
          echo ${a}' add iptables.'>>${LOG_FILE}
+         echo ${a}>> ${BAD_IPS}
          SUCCESS=`/sbin/iptables -I INPUT -p tcp --dport 80 -s ${a} -j DROP`
         fi
     fi  
