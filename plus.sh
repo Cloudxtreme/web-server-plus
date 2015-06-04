@@ -93,6 +93,14 @@ do
     echo ${a} 'is delete from iptables .'>>${LOG_FILE}
     fi
     continue
+    else
+    #匹配网段
+        IP_PRE=`echo $a |awk -F '.' '{print $1"."$2"."$3}'`
+        IS_SAFE=`cat ${SAFE_LOG}|grep $IP_PRE`
+        if [ ! -z "${IS_SAFE}" ];then
+        echo ${a} 'is safe ip.'>>${LOG_FILE}
+        continue
+        fi
     fi
     
     IS_BAD=`cat ${BAD_IPS}|grep $a`
